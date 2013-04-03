@@ -1,57 +1,151 @@
 (ns nlu-parser.core)
 
-
 (defrecord Atom [cat])
 (defrecord Functor [ret dir arg])
 
-;; the Stack in the workspace
+;; (def andie [(Functor. (Atom. 'S)
+;;                        "/"
+;;                        (Functor. (Atom. 'S) "\\" (Atom. 'NP)))
+;;             (fn [x] (x 'andie))])
+;; (def see [(Functor. (Functor. (Atom. 'S) "\\" (Atom. 'NP))
+;;                      "/"
+;;                      (Atom. 'NP))
+;;           (fn [x] (fn [y] ['loves y x]))])
 
-(def andie [(Functor. (Atom. 'S)
-                       "/"
-                       (Functor. (Atom. 'S) "\\" (Atom. 'NP))
-                       )
-             #(%1 'andie)])
-(def see [(Functor. (Functor. (Atom. 'S) "\\" (Atom. 'NP))
-                     "/"
-                     (Atom. 'NP))
-          #('see %2 %1)])
+;; (def steve [(Atom. 'NP)
+;;             'steve])
 
-(def steve [(Atom. 'NP)
-            'steve])
+(def lexicon {"andie" (Functor. (Atom. 'S)
+                                "/"
+                                (Functor. (Atom. 'S) "\\" (Atom. 'NP)))
+              "see" (Functor. (Functor. (Atom. 'S) "\\" (Atom. 'NP))
+                              "/"
+                              (Atom. 'NP))
+              "steve" (Atom. 'NP)
+              "the" (Functor. (Atom. 'NP) "/" (Atom. 'N))
+              "dog" (Atom. 'N)
+              "John" (Atom. 'NP)
+              "bit" (Functor. (Functor. (Atom. 'S) "\\" (Atom. 'NP)) "/" (Atom. 'NP))
+              })
 
-(def stack (conj (conj '() andie) see))
+;; returns a string representation of the complex or simple type
+(defn type-to-string [t]
+  (cond (= (class t) Functor)
+        (str "(" (type-to-string (:ret t)) (:dir t) (type-to-string (:arg t)) ")")
+        (= (class t) Atom)
+        (:cat t)))
 
-;; test if two terms, f1 and f2, are equivalent
-(defn equivalent [f1 f2]
-  (cond
-   ;; comparing two functors
-   (and (= (class f2) Functor) (= (class f1) Functor))
-   (and (= (:ret f1) (:ret f2))
-        (= (:arg f1) (:arg f2))
-        (= (:dir f1) (:dir f2)))
-   ;; comparing two atoms
-   (not (and (= (class f2) Functor) (= (class f1) Functor)))
-   (= f1 f2)
-   ;; comparing a functor with an atom
-   :else false))
+(def example1 ["the" "dog" "bit" "John"])
 
-
-;; do composition on functions f1 and f2
-(defn compose [f1 f2]
-  (do
-    (println (str "composing " f1 " " f2))
+;; returns true if Types t1 and t2 are equivalent 
+(defn equivalent? [t1 t2]
+  (let [c1 (class t1)
+        c2 (class t2)]
     (cond
-     ;; composition combinator alpha
-     (and (= (:dir f2) "/") (= (:dir f1) "/"))
-     (if (equivalent (:arg f1) (:ret f2))
-       (Functor. (:ret f1) "/" (:arg f2)))
-     ;; composition combinator beta
-     (and (= (:dir f2) "\\") (= (:dir f1) "\\"))
-     (if (equivalent (:ret f1) (:arg f2))
-       (Functor. (:ret f2) "\\" (:arg f1))))))
+     ;; comparing two functors
+     (and (= c2 Functor) (= c1 Functor))
+     (and (= (:ret t1) (:ret t2))
+          (= (:arg t1) (:arg t2))
+          (= (:dir t1) (:dir t2)))
+     ;; comparing two atoms
+     (not (and (= c1 Functor) (= c2 Functor)))
+     (= t1 t2)
+     ;; comparing functor with atom
+     (= c1 Functor)
+     (= (:arg t1) t2)
+     ;; comparing atom with functor
+     :else
+     (= t1 (:arg t2)))))
 
-(def first-pass (compose (first (last stack)) (first (first stack))))
-(compose first-pass (first steve))
+;; compose Types t1 and t2
+(defn compose [t1 t2]
+  (let [c1 (class t1)
+        c2 (class t2)]
+    (cond (and (= c2 Functor) (= c1 Functor))
+          (if (and (= (:dir t2) "/") (= (:dir t1) "/"))
+            (Functor. (:ret t1) "/" (:arg t2))
+            (Functor. (:ret t2) "\\" (:arg t1)))
+          (= c1 Functor) (:ret t1)
+          :else          (:ret t2))))
 
-;; something doesn't make sense here... we're accessing :dir of the atom in compose. We
-;; should be checking if f1 and f2 ARE functors before we do the rule.
+;; returns true if Type t1 is composable with Type t2, false otherwise
+(defn composable? [t1 t2]
+  (let [c1 (class t1)
+        c2 (class t2)]
+    (cond (and (= c2 Functor) (= c1 Functor))
+          (cond
+           ;; composition combinator alpha
+           (and (= (:dir t2) "/") (= (:dir t1) "/"))
+           (equivalent? (:arg t1) (:ret t2))
+           
+           ;; composition combinator beta
+           (and (= (:dir t2) "\\") (= (:dir t1) "\\"))
+           (equivalent? (:ret t1) (:arg t2)))
+
+          ;; comparing LHS functor with RHS atom
+          (= c1 Functor)
+          (and (= (:dir t1) "/") (equivalent? (:arg t1) t2))
+
+          ;; comparing RHS functor with LHS atom
+          (= c2 Functor)
+          (and (= (:dir t2) "\\") (equivalent? (:arg t2) t1))
+
+          :else false)))
+
+;; (defn reduce-stack [s]
+;; (let [t1 (first s)
+;;       t2 (second s)]
+;;   (if (composable? (first t2) (first t1))
+;;     [(compose (first t2)(first t1))
+;;      ((second t2) (second t1))])))
+
+;; SHIFT: push the first word's lexical entry onto the stack
+(defn shift-stack [sentence stack]
+  (let [s1 (first sentence)]
+    (do
+      ;;(println (str "pushing: " s1))
+      (if (not (nil? s1))
+        (cons (lexicon (first sentence)) stack)
+        stack))))
+
+;; non-deterministic parse 
+(defn non-det-parse [sentence stack]
+  (let [s (shift-stack sentence stack)
+        sent (rest sentence)
+        t1 (first s)
+        t2 (second s)]
+    (do (println "\nParse list: " sentence)
+        (println "Stack: " (reverse (map type-to-string s)))
+
+        ;; sentence empty, all words have been pushed to stack
+        (if (empty? sent)
+          (cond (= (count s) 1)
+                (println "found valid parse: " (:cat (first s)))
+                
+                (composable? t2 t1)
+                (do
+                  (println "composing " (type-to-string t2) " and " (type-to-string t1))
+                  (non-det-parse sent
+                                 (cons (compose t2 t1) (rest (rest s)))))
+                
+                :else (do (println "failed to find a valid parse")
+                          s))
+          
+          ;; sentence non-empty
+          (if (> (count s) 1)
+            (if (composable? t2 t1)
+              (do
+                (println "composing " (type-to-string t2) " and " (type-to-string t1))
+                (non-det-parse sent
+                               (cons (compose t2 t1) (rest (rest s)))))
+              (non-det-parse sent s))
+            (non-det-parse sent s))))))
+
+
+(println "\n---------------------------")
+(non-det-parse example1 '())
+
+;; TODO type raising, Unification?
+;; TODO multiple entries for lexical items, choosing mechanism (must demonstrate ambiguity)
+;; TODO BFS search through stack-space
+;; TODO expand lexicon to a specific domain
