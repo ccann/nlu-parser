@@ -15,18 +15,21 @@
 ;; (def steve [(Atom. 'NP)
 ;;             'steve])
 
-(def lexicon {"andie" (Functor. (Atom. 'S)
-                                "/"
-                                (Functor. (Atom. 'S) "\\" (Atom. 'NP)))
-              "see" (Functor. (Functor. (Atom. 'S) "\\" (Atom. 'NP))
+;; "andie" (Functor. (Atom. 'S)
+;;                                 "/"
+;;                                 (Functor. (Atom. 'S) "\\" (Atom. 'NP)))
+
+(def lexicon {"andie" [(Atom. 'NP)] 
+              "saw" [(Functor. (Functor. (Atom. 'S) "\\" (Atom. 'NP))
                               "/"
                               (Atom. 'NP))
-              "steve" (Atom. 'NP)
-              "the" (Functor. (Atom. 'NP) "/" (Atom. 'N))
-              "dog" (Atom. 'N)
-              "John" (Atom. 'NP)
-              "bit" (Functor. (Functor. (Atom. 'S) "\\" (Atom. 'NP)) "/" (Atom. 'NP))
-              })
+                     (Atom. 'N)]
+              "steve" [(Atom. 'NP)]
+              "loves" [(Functor. (Functor. (Atom. 'S) "\\" (Atom. 'NP)) "/" (Atom. 'NP))]
+              "the" [(Functor. (Atom. 'NP) "/" (Atom. 'N))]
+              "dog" [(Atom. 'N)]
+              "John" [(Atom. 'NP)]
+              "bit" [(Functor. (Functor. (Atom. 'S) "\\" (Atom. 'NP)) "/" (Atom. 'NP))]})
 
 ;; returns a string representation of the complex or simple type
 (defn type-to-string [t]
@@ -35,28 +38,7 @@
         (= (class t) Atom)
         (:cat t)))
 
-(def example1 ["the" "dog" "bit" "John"])
-(def example2 ["andie" "see" "the" "dog"])
 
-;; returns true if Types t1 and t2 are equivalent 
-(defn equivalent? [t1 t2]
-  (let [c1 (class t1)
-        c2 (class t2)]
-    (cond
-     ;; comparing two functors
-     (and (= c2 Functor) (= c1 Functor))
-     (and (= (:ret t1) (:ret t2))
-          (= (:arg t1) (:arg t2))
-          (= (:dir t1) (:dir t2)))
-     ;; comparing two atoms
-     (not (and (= c1 Functor) (= c2 Functor)))
-     (= t1 t2)
-     ;; comparing functor with atom
-     (= c1 Functor)
-     (= (:arg t1) t2)
-     ;; comparing atom with functor
-     :else
-     (= t1 (:arg t2)))))
 
 ;; compose Types t1 and t2
 (defn compose [t1 t2]
@@ -69,27 +51,27 @@
           (= c1 Functor) (:ret t1)
           :else          (:ret t2))))
 
-;; returns true if Type t1 is composable with Type t2, false otherwise
+;; returns true if two Types are composable by composition or appplication combinators
 (defn composable? [t1 t2]
   (let [c1 (class t1)
         c2 (class t2)]
     (cond (and (= c2 Functor) (= c1 Functor))
           (cond
-           ;; composition combinator alpha
+           ;; > Forward composition combinator
            (and (= (:dir t2) "/") (= (:dir t1) "/"))
-           (equivalent? (:arg t1) (:ret t2))
+           (= (:arg t1) (:ret t2))
            
-           ;; composition combinator beta
+           ;; < Backward composition combinator
            (and (= (:dir t2) "\\") (= (:dir t1) "\\"))
-           (equivalent? (:ret t1) (:arg t2)))
+           (= (:ret t1) (:arg t2)))
 
-          ;; comparing LHS functor with RHS atom
+          ;; > Forward application combinator
           (= c1 Functor)
-          (and (= (:dir t1) "/") (equivalent? (:arg t1) t2))
+          (and (= (:dir t1) "/") (= (:arg t1) t2))
 
-          ;; comparing RHS functor with LHS atom
+          ;; < Backward application combinator
           (= c2 Functor)
-          (and (= (:dir t2) "\\") (equivalent? (:arg t2) t1))
+          (and (= (:dir t2) "\\") (= (:arg t2) t1))
 
           :else false)))
 
@@ -100,18 +82,25 @@
 ;;     [(compose (first t2)(first t1))
 ;;      ((second t2) (second t1))])))
 
+;;(lexicon (first sentence))
+
+;; returns a random entry for the word in the lexicon
+(defn random-lookup [word]
+  (let [entries (lexicon word)]
+    (nth entries (rand-int (count entries)))))
+
 ;; SHIFT: push the first word's lexical entry onto the stack
-(defn shift-stack [sentence stack]
+(defn shift [sentence stack]
   (let [s1 (first sentence)]
     (do
       ;;(println (str "pushing: " s1))
       (if (not (nil? s1))
-        (cons (lexicon (first sentence)) stack)
+        (cons (random-lookup (first sentence)) stack)
         stack))))
 
 ;; non-deterministic parse 
 (defn non-det-parse [sentence stack]
-  (let [s (shift-stack sentence stack)
+  (let [s (shift sentence stack)
         sent (rest sentence)
         t1 (first s)
         t2 (second s)]
@@ -144,9 +133,26 @@
 
 
 (println "\n---------------------------")
+
+(def example3 '("andie" "loves" "steve"))
+(def example1 '("the" "dog" "bit" "John"))
+(def example2 '("andie" "saw" "the" "dog"))
+
 (non-det-parse example2 '())
 
 ;; TODO type raising, Unification?
 ;; TODO multiple entries for lexical items, choosing mechanism (must demonstrate ambiguity)
 ;; TODO BFS search through stack-space
 ;; TODO expand lexicon to a specific domain
+
+
+;; functional composition: allows two functional categories to combine partially.
+;; type-raising: converts atomic or otherwise simpler categories into more complex
+;; functional categories
+;; proper names: NP
+;; transitive verbs: (S\NP)/NP
+;; left-branching derivations produce well-formed semantic representations
+;; This is a side-effect of type-raising and functional composition
+
+;; The parser: consults the lexicon to find out the possible lexical categories and
+;; semantic representations for the input word
