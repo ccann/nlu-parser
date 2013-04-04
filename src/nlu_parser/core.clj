@@ -36,6 +36,7 @@
         (:cat t)))
 
 (def example1 ["the" "dog" "bit" "John"])
+(def example2 ["andie" "see" "the" "dog"])
 
 ;; returns true if Types t1 and t2 are equivalent 
 (defn equivalent? [t1 t2]
@@ -143,7 +144,7 @@
 
 
 (println "\n---------------------------")
-(non-det-parse example1 '())
+(non-det-parse example2 '())
 
 ;; TODO type raising, Unification?
 ;; TODO multiple entries for lexical items, choosing mechanism (must demonstrate ambiguity)
