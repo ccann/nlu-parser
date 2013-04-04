@@ -21,8 +21,8 @@
 
 (def lexicon {"andie" [(Atom. 'NP)] 
               "saw" [(Functor. (Functor. (Atom. 'S) "\\" (Atom. 'NP))
-                              "/"
-                              (Atom. 'NP))
+                               "/"
+                               (Atom. 'NP))
                      (Atom. 'N)]
               "steve" [(Atom. 'NP)]
               "loves" [(Functor. (Functor. (Atom. 'S) "\\" (Atom. 'NP)) "/" (Atom. 'NP))]
@@ -38,18 +38,18 @@
         (= (class t) Atom)
         (:cat t)))
 
-
-
 ;; compose Types t1 and t2
 (defn compose [t1 t2]
   (let [c1 (class t1)
         c2 (class t2)]
-    (cond (and (= c2 Functor) (= c1 Functor))
-          (if (and (= (:dir t2) "/") (= (:dir t1) "/"))
-            (Functor. (:ret t1) "/" (:arg t2))
-            (Functor. (:ret t2) "\\" (:arg t1)))
-          (= c1 Functor) (:ret t1)
-          :else          (:ret t2))))
+    (do
+      (println "COMPOSING" (type-to-string t2) "and" (type-to-string t1)) 
+      (cond (and (= c2 Functor) (= c1 Functor))
+            (if (and (= (:dir t2) "/") (= (:dir t1) "/"))
+              (Functor. (:ret t1) "/" (:arg t2))
+              (Functor. (:ret t2) "\\" (:arg t1)))
+            (= c1 Functor) (:ret t1)
+            :else          (:ret t2)))))
 
 ;; returns true if two Types are composable by composition or appplication combinators
 (defn composable? [t1 t2]
@@ -86,50 +86,48 @@
 
 ;; returns a random entry for the word in the lexicon
 (defn random-lookup [word]
-  (let [entries (lexicon word)]
-    (nth entries (rand-int (count entries)))))
+  (let [entries (lexicon word)
+        selection (nth entries (rand-int (count entries)))]
+    (do
+      (println "SELECTING:" (type-to-string selection) "for" word)
+      selection)))
 
 ;; SHIFT: push the first word's lexical entry onto the stack
 (defn shift [sentence stack]
   (let [s1 (first sentence)]
-    (do
-      ;;(println (str "pushing: " s1))
-      (if (not (nil? s1))
-        (cons (random-lookup (first sentence)) stack)
-        stack))))
+    (if (not (nil? s1))
+      (let [entry (random-lookup s1)]
+        (do (println  "PUSHING:" (type-to-string entry) "onto"
+                      (map type-to-string stack))
+            (cons entry stack)))
+      stack)))
 
 ;; non-deterministic parse 
 (defn non-det-parse [sentence stack]
-  (let [s (shift sentence stack)
-        sent (rest sentence)
-        t1 (first s)
-        t2 (second s)]
-    (do (println "\nParse list: " sentence)
-        (println "Stack: " (reverse (map type-to-string s)))
-
-        ;; sentence empty, all words have been pushed to stack
-        (if (empty? sent)
-          (cond (= (count s) 1)
-                (println "found valid parse: " (:cat (first s)))
-                
-                (composable? t2 t1)
-                (do
-                  (println "composing " (type-to-string t2) " and " (type-to-string t1))
-                  (non-det-parse sent
-                                 (cons (compose t2 t1) (rest (rest s)))))
-                
-                :else (do (println "failed to find a valid parse")
-                          s))
-          
-          ;; sentence non-empty
-          (if (> (count s) 1)
-            (if (composable? t2 t1)
-              (do
-                (println "composing " (type-to-string t2) " and " (type-to-string t1))
-                (non-det-parse sent
-                               (cons (compose t2 t1) (rest (rest s)))))
-              (non-det-parse sent s))
-            (non-det-parse sent s))))))
+  (do (println "\nSTACK:" (map type-to-string stack))
+      (println "INPUT:" sentence)
+      (let [s (shift sentence stack)
+            sent (rest sentence)
+            t1 (first s)
+            t2 (second s)]
+        (do 
+          ;; sentence empty, all words have been pushed to stack
+          (if (empty? sent)
+            (cond (= (count s) 1)
+                  (println "found valid parse:" (:cat (first s)))
+                  
+                  (composable? t2 t1)
+                  (non-det-parse sent (cons (compose t2 t1) (rest (rest s))))
+                  
+                  :else (do (println "failed to find a valid parse")
+                            s))
+            
+            ;; sentence non-empty
+            (if (> (count s) 1)
+              (if (composable? t2 t1)
+                (non-det-parse sent (cons (compose t2 t1) (rest (rest s))))
+                (non-det-parse sent s))
+              (non-det-parse sent s)))))))
 
 
 (println "\n---------------------------")
@@ -146,13 +144,7 @@
 ;; TODO expand lexicon to a specific domain
 
 
-;; functional composition: allows two functional categories to combine partially.
-;; type-raising: converts atomic or otherwise simpler categories into more complex
-;; functional categories
-;; proper names: NP
-;; transitive verbs: (S\NP)/NP
-;; left-branching derivations produce well-formed semantic representations
-;; This is a side-effect of type-raising and functional composition
-
 ;; The parser: consults the lexicon to find out the possible lexical categories and
 ;; semantic representations for the input word
+
+;; type-raising is assumed to be in the lexicon, and only on atomic entries.
