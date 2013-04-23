@@ -19,15 +19,6 @@
 (defn is-functor? [t] (= (class t) Functor))
 (defn is-atom? [t] (= (class t) Atom))
 
-;; (def andie [(Functor. (Atom. 'S)
-;;                      "/"
-;;                        (Functor. (Atom. 'S) "\\" (Atom. 'NP)))
-;;             ])
-;; (def see [(Functor. (Functor. (Atom. 'S) "\\" (Atom. 'NP))
-;;                      "/"
-;;                      (Atom. 'NP))
-;;          ])
-
 ;; Returns the result of applying the forward type-raising combinator to atom
 (defn forward-tr [atom]
   (Functor. (Atom. 'T) "/" (Functor. (Atom. 'T) "\\" atom)))
@@ -71,6 +62,13 @@
 
               "bit" {(Functor. (Functor. (Atom. 'S) "\\" (Atom. 'NP)) "/" (Atom. 'NP))
                      (fn [y] (fn [x] ['bite y x]))}})
+
+;; need to create hooks for situatedness. Specifically -- an input
+;; vector consisting of potentially recognized visual targets in
+;; lexical key form (strings). If this vector is non-empty, bias the
+;; lexical choice of the entry to N or NP form.
+(def objects-detected #{"saw" "table"})
+
 
 ;; returns a string representation of the complex or simple type
 (defn type-to-string [t]
@@ -154,18 +152,23 @@
   (keys (lexicon word)))
 
 ;; returns a random entry for the word in the lexicon
-(defn random-lookup [word]
-  (let [entries (get-lexical-entries-2 word)
-        selection (nth entries (rand-int (count entries)))]
-    (do
-      (println "SELECTING:" (type-to-string selection) "for" word)
-      selection)))
-
+(defn random-lookup-with-hooks [word]
+  (if (contains? objects-detected word)
+    (when (contains? (set (get-lexical-entries-2 word)) (Atom. 'N))
+      (do
+        (println "SELECTING:" (type-to-string (Atom. 'N)) "for" word)
+        (Atom. 'N)))
+    (let [entries (get-lexical-entries-2 word)
+          selection (nth entries (rand-int (count entries)))]
+      (do
+        (println "SELECTING:" (type-to-string selection) "for" word)
+        selection))))
+  
 ;; SHIFT: push the first word's lexical entry onto the stack
 (defn shift [sentence stack sem]
   (let [s1 (first sentence)]
     (if (not (nil? s1))
-      (let [entry (random-lookup s1)]
+      (let [entry (random-lookup-with-hooks s1)]
         (do (println  "PUSHING:" (type-to-string entry) "onto"
                       (reverse (map type-to-string stack)))
             [(cons entry stack) (cons ((lexicon s1) entry) sem)]))
@@ -216,24 +219,26 @@
             ;; else if reducible, recurse on reduced stack
             (if (reducible? t1 t2)
               (let [ [t m] (reduce-stack t1 t2 m1 m2) ]
-                (non-det-parse sentence (cons t (rest (rest stack)))
-                               (cons m (rest (rest sem)))))
+                (non-det-parse sentence (cons t (drop 2 stack))
+                               (cons m (drop 2 sem))))
 
               ;; if not reducible, recurse on shifted stack and rest of sentence
               (let [new-stack-sem (shift sentence stack sem)] 
                 (non-det-parse (rest sentence) (first new-stack-sem) (second new-stack-sem)))))
           (if (< (count stack) 2)
-            (do (println "found valid non-det-parse:" (type-to-string t2))
-                (println sem)
+            (do (println "found valid parse:" (type-to-string t2))
+                ;;(println sem)
                 true)
             (if (reducible? t1 t2)
               ;; if reducible, recurse on reduced stack
               (let [ [t m] (reduce-stack t1 t2 m1 m2)]
-                (non-det-parse sentence (cons t (rest (rest stack)))
-                               (cons m (rest (rest sem)))))
+                (non-det-parse sentence (cons t (drop 2 stack))
+                               (cons m (drop 2 sem))))
               ;; otherwise return failure
-              (do (println "failed to find a valid non-det-parse")
+              (do (println "failed to find a valid parse")
                   false)))))))
+
+
 
 
 (println "\n---------------------------")
@@ -243,7 +248,7 @@
 (def example2 "andie saw the dog")
 (def example4 "the flowers sent for the patient")
 
-(non-det-parse (split example3 #"\s") '() '())
+(non-det-parse (split example2 #"\s") '() '())
 
 
 
