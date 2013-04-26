@@ -25,68 +25,67 @@
   (Functor. (Atom. 'T) "\\" (Functor. (Atom. 'T) "/" atom)))
 
 ;; returns a string representation of the complex or simple type
-(defn type-to-string [t]
+(defn tts [t]
   (cond (is-functor? t)
-        (str "(" (type-to-string (:ret t)) (:dir t) (type-to-string (:arg t)) ")")
+        (str "(" (tts (:ret t)) (:dir t) (tts (:arg t)) ")")
         (is-atom? t)
         (:cat t)))
 
 ;; LEXICON 
-(def lexicon {"#77" {(Atom. 'NP) '77
-                       (forward-tr (Atom. 'NP)) (fn [x] (x '77))}
+(def hockey-lexicon {"77" {(Atom. 'NP) '77
+                            (forward-tr (Atom. 'NP)) (fn [x] (x '77))
+                            (backward-tr (Atom. 'NP)) (fn [x] (x '77))}
               
-              "thanked" {(Functor. (Functor. (Atom. 'S) "\\" (Atom. 'NP)) "/" (Atom. 'NP))
-                     (fn [y] (fn [x] ['thank y x]))
-                     (Atom. 'N) (fn [x] ['thank x])}
+                     "loved" {(Functor. (Functor. (Atom. 'S) "\\" (Atom. 'NP)) "/" (Atom. 'NP))
+                                (fn [y] (fn [x] ['thank y x]))}
 
-              "Jagr" {(Atom. 'NP) 'jagr
-                       (forward-tr (Atom. 'NP)) (fn [x] (x 'jagr))}
+                     "jagr" {(Atom. 'NP) 'jagr
+                             (forward-tr (Atom. 'NP)) (fn [x] (x 'jagr))
+                             (backward-tr (Atom. 'NP)) (fn [x] (x 'jagr))}
               
-              "checked" {(Functor. (Functor. (Atom. 'S) "\\" (Atom. 'NP)) "/" (Atom. 'NP))
-                       (fn [y] (fn [x] ['check y x]))}
+                     ;; "checked" {(Functor. (Functor. (Atom. 'S) "\\" (Atom. 'NP)) "/" (Atom. 'NP))
+                     ;;            (fn [y] (fn [x] ['check y x]))}
               
-              "the" {(Functor. (Atom. 'NP) "/" (Atom. 'N))
-                     (fn [p] ['def p])}
+                     ;; "the" {(Functor. (Atom. 'NP) "/" (Atom. 'N))
+                     ;;        (fn [p] ['def p])}
 
-              "fans" {(Atom. 'N) (fn [x] ['fans x])
-                         (Functor. (Atom. 'N) "/" (Functor. (Atom. 'N) "\\" (Atom. 'N)))
-                         (fn [q] (fn [x] [(q 'fans) x]))}
+                     ;; "fans" {(Atom. 'N) (fn [x] ['fans x])
+                     ;;         (Functor. (Atom. 'N) "/" (Functor. (Atom. 'N) "\\" (Atom. 'N)))
+                     ;;         (fn [q] (fn [x] [(q 'fans) x]))}
               
-              "saved" {(Functor. (Functor. (Atom. 'S) "\\" (Atom. 'NP)) "/" (Atom. 'PP))
-                       (fn [y] (fn [x] ['save y x]))}
+                     ;; "saved" {(Functor. (Functor. (Atom. 'S) "\\" (Atom. 'NP)) "/" (Atom. 'PP))
+                     ;;          (fn [y] (fn [x] ['save y x]))}
 
-              "skated" {(Functor. (Functor. (Atom. 'S) "\\" (Atom. 'NP)) "/" (Atom. 'PP))
-                        (fn [y] (fn [x] ['skate y x]))}
+                     ;; "skated" {(Functor. (Functor. (Atom. 'S) "\\" (Atom. 'NP)) "/" (Atom. 'PP))
+                     ;;           (fn [y] (fn [x] ['skate y x]))}
 
-              "skate" {(Functor. (Functor. (Atom. 'S) "\\" (Atom. 'NP)) "/" (Atom. 'PP))
-                       (fn [y] (fn [x] ['skate y x]))
-                       (Atom. 'N) (fn [x] ['skate x])}
+                     ;; "skate" {(Functor. (Functor. (Atom. 'S) "\\" (Atom. 'NP)) "/" (Atom. 'PP))
+                     ;;          (fn [y] (fn [x] ['skate y x]))
+                     ;;          (Atom. 'N) (fn [x] ['skate x])}
+                     
+                     ;; "for" {(Functor. (Atom. 'PP) "/" (Atom. 'NP)) (fn [x] x)}
               
-              "for" {(Functor. (Atom. 'PP) "/" (Atom. 'NP)) (fn [x] x)}
+                     ;; "skater" {(Atom. 'N) (fn [x] ['skater x])
+                     ;;           (Functor. (Atom. 'N) "/" (Functor. (Atom. 'N) "\\" (Atom. 'N)))
+                     ;;           (fn [q] (fn [x] [(q 'skater) x]))}
+
+                     ;; "player" {(Atom. 'N) (fn [x] ['player x])
+                     ;;           (Functor. (Atom. 'N) "/" (Functor. (Atom. 'N) "\\" (Atom. 'N)))
+                     ;;           (fn [q] (fn [x] [(q 'player) x]))}
+
+                     ;; "players" {(Atom. 'N) (fn [x] ['players x])
+                     ;;            (Functor. (Atom. 'N) "/" (Functor. (Atom. 'N) "\\" (Atom. 'N)))
+                     ;;            (fn [q] (fn [x] [(q 'players) x]))}
               
-              "skater" {(Atom. 'N) (fn [x] ['skater x])
-                         (Functor. (Atom. 'N) "/" (Functor. (Atom. 'N) "\\" (Atom. 'N)))
-                         (fn [q] (fn [x] [(q 'skater) x]))}
+                     ;; "puck" {(Atom. 'N) (fn [x] ['puck x])}
 
-              "player" {(Atom. 'N) (fn [x] ['player x])
-                         (Functor. (Atom. 'N) "/" (Functor. (Atom. 'N) "\\" (Atom. 'N)))
-                         (fn [q] (fn [x] [(q 'player) x]))}
+                     ;; "henrik" {(Atom. 'NP) 'henrik
+                     ;;           (forward-tr (Atom. 'NP)) (fn [x] (x 'henrik))}
 
-              "players" {(Atom. 'N) (fn [x] ['players x])
-                         (Functor. (Atom. 'N) "/" (Functor. (Atom. 'N) "\\" (Atom. 'N)))
-                         (fn [q] (fn [x] [(q 'players) x]))}
-              
-              "puck" {(Atom. 'N) (fn [x] ['puck x])}
+                     ;; "shot" {(Functor. (Functor. (Atom. 'S) "\\" (Atom. 'NP)) "/" (Atom. 'NP))
+                     ;;         (fn [y] (fn [x] ['shoot y x]))
+                     })                                      
 
-              "Henrik" {(Atom. 'NP) 'henrik
-                       (forward-tr (Atom. 'NP)) (fn [x] (x 'henrik))}
-
-              "shot" {(Functor. (Functor. (Atom. 'S) "\\" (Atom. 'NP)) "/" (Atom. 'NP))
-                     (fn [y] (fn [x] ['shoot y x]))}})
-
-
-;; set of objects from vision that are located in the immediate environment
-(def objects-detected #{"puck" "skate"})
 
 
 (defn unifiable? [t1 t2]
@@ -125,21 +124,11 @@
    (and (is-atom? t1) (is-functor? t2))
    (and (= (:dir t2) "\\") (= (:arg t2) t1))
    :else false))
- 
-;; (defn combine [t1 t2 m1 m2]
-;;   (do
-;;     (println "COMBINING" (type-to-string t1) "and" (type-to-string t2)) 
-;;     (cond (and (is-functor? t1) (is-functor? t2))
-;;           (if (and (= (:dir t2) "/") (= (:dir t1) "/"))
-;;             [(Functor. (:ret t1) "/" (:arg t2)) (m1 m2)]
-;;             [(Functor. (:ret t2) "\\" (:arg t1)) (m2 m1)])
-;;           (is-functor? t1) (do (println "YO" (type-to-string (:ret t1))) [(:ret t1) (m1 m2)])
-;;           :else        (do (println "YO2 "(type-to-string (:ret t2))) [(:ret t2) (m1 m2)]))))
 
 ;; compose Types t1 and t2
 (defn combine [t1 t2]
   (do
-    (println "COMBINING" (type-to-string t1) "and" (type-to-string t2)) 
+    (println "COMBINING" (tts t1) "and" (tts t2)) 
     (cond (and (is-functor? t1) (is-functor? t2))
           (if (and (= (:dir t2) "/") (= (:dir t1) "/"))
             (Functor. (:ret t1) "/" (:arg t2))
@@ -147,55 +136,43 @@
           (is-functor? t1)  (:ret t1)
           :else             (:ret t2))))
 
-;; (defn get-lexical-entries [word]
-;;   (let [entries (lexicon word)]
-;;     (loop [accum entries
-;;            ents entries]
-;;       (let [e (first ents)]
-;;         (if (nil? e)
-;;           accum
-;;           (if (is-atom? e)
-;;             (recur (cons (forward-tr e) (cons (backward-tr e) accum))
-;;                    (rest ents))
-;;             (recur accum (rest ents))))))))
 
-;; returns the collection of lexical entries for the word, including type-raised atoms
-(defn get-lexical-entries [word]
-  (keys (lexicon word)))
+;; returns the reduction of t1 and t2 -- call reducible? first as a check
+(defn ccg-reduce-types [t1 t2]
+  (if (or (comp-combinable? t1 t2) (app-combinable? t1 t2))
+    (combine t1 t2)
+    (if (and (= (:dir t2) "/") (= (:dir t1) "/"))
+      (do (println "UNIFYING:" (tts t1) "with" (tts t2))
+          (combine (unify t1 t2) t2))
+      (do (println "UNIFYING:" (tts t2) "with" (tts t1))
+          (combine t1 (unify t2 t1))))))
 
-;; returns a random entry for the word in the lexicon
-(defn random-lookup-with-hooks [word]
-  (if (contains? objects-detected word)
-    (when (contains? (set (get-lexical-entries word)) (Atom. 'N))
-      (do
-        (println "SELECTING:" (type-to-string (Atom. 'N)) "for" word)
-        (Atom. 'N)))
-    (let [entries (get-lexical-entries word)
-          selection (nth entries (rand-int (count entries)))]
-      (do
-        (println "SELECTING:" (type-to-string selection) "for" word)
-        selection))))
+;; SHIFT: push the  onto the stack
+(defn ccg-push [entry stack]
+  (if (not (nil? entry))
+    (let [result (cons entry stack)]
+      (do (println "PUSHING:" (tts entry) "onto" (reverse (map tts stack)))
+          result))
+    (let [result stack]
+      (do (println "ERROR!: trying to push nil onto stack")
+          result))))
 
+(defn lookup [word lex]
+  (keys (lex word)))
 
-;; (defn shift [sentence stack sem]
-;;   (let [s1 (first sentence)]
-;;     (if (not (nil? s1))
-;;       (let [entry (random-lookup-with-hooks s1)]
-;;         (do (println  "PUSHING:" (type-to-string entry) "onto"
-;;                       (reverse (map type-to-string stack)))
-;;             [(cons entry stack) (cons ((lexicon s1) entry) sem)]))
-;;       [stack sem])))
+(defn ccg-shift [word ws lex]
+  (let [entries (lookup word lex)]
+    (if (empty? ws)
+      (for [e entries] [e])
+      (apply concat (for [stack ws]
+                      (for [e entries] (ccg-push e stack)))))))
 
-;; SHIFT: push the first word's lexical entry onto the stack
-(defn shift [sentence stack]
-  (let [s1 (first sentence)]
-    (if (not (nil? s1))
-      (let [entry (random-lookup-with-hooks s1)]
-        (do (println  "PUSHING:" (type-to-string entry) "onto"
-                      (reverse (map type-to-string stack)))
-            (cons entry stack)))
+(defn ccg-reduce [stack]
+  (let [t2 (first stack)
+        t1 (second stack)]
+    (if (reducible? t1 t2)
+      (ccg-reduce (cons (ccg-reduce-types t1 t2) (drop 2 stack)))
       stack)))
-
 
 ;; returns true if t1 and t2 are reducible
 (defn reducible? [t1 t2]
@@ -211,105 +188,27 @@
             false))
         false)))
 
-
-;; (defn reduce-stack [t1 t2 m1 m2]
-;;   (do (println "begin")
-;;       (if (or (comp-combinable? t1 t2) (app-combinable? t1 t2))
-;;         (do (println "first if")
-;;             (combine t1 t2 m1 m2)
-;;             )
-;;         (if (and (= (:dir t2) "/") (= (:dir t1) "/"))
-;;           (do (println "UNIFYING:" (type-to-string t1) "with" (type-to-string t2))
-;;               (combine (unify t1 t2) t2 m2 m1))
-;;           (do (println "UNIFYING:" (type-to-string t2) "with" (type-to-string t1))
-;;               (combine t1 (unify t2 t1) m1 m2))))))
-
-;; returns the reduction of t1 and t2 -- call reducible? first as a check
-(defn reduce-stack [t1 t2]
-  (if (or (comp-combinable? t1 t2) (app-combinable? t1 t2))
-    (combine t1 t2)
-    (if (and (= (:dir t2) "/") (= (:dir t1) "/"))
-      (do (println "UNIFYING:" (type-to-string t1) "with" (type-to-string t2))
-          (combine (unify t1 t2) t2))
-      (do (println "UNIFYING:" (type-to-string t2) "with" (type-to-string t1))
-          (combine t1 (unify t2 t1))))))
+(defn ccg-parse [sent workspace lex]
+  (if (not (empty? sent))
+    (let [word (first sent)
+          ws (ccg-shift word workspace lex)]
+      (ccg-parse (rest sent)       
+                 (for [stack ws]
+                   (ccg-reduce stack))
+                 lex))
+    (let [succs (filter (partial = [(Atom. 'S)]) workspace)]
+      (if (empty? succs)
+        (println "FAILURE: could not find a valid parse.")
+        (println "SUCCESS: found" (count succs) "valid parses amidst"
+                 (count workspace) "possible parses.")))))
 
 
-;; (defn nd-sr-parse [sentence stack sem]
-;;   (let [t1 (second stack)
-;;         t2 (first stack)
-;;         m1 (second sem)
-;;         m2 (first sem)]
-;;     (do (println "\nSTACK:" (reverse (map type-to-string stack)))
-;;         (println "INPUT:" sentence)
-;;         (if (not (empty? sentence))
-;;           (if (< (count stack) 2)
-;;             (let [new-stack-sem (shift sentence stack sem)]
-;;               ;; recurse on shifted stack and rest of sentence
-;;               (nd-sr-parse (rest sentence) (first new-stack-sem) (second new-stack-sem)))
-;;             ;; else if reducible, recurse on reduced stack
-;;             (if (reducible? t1 t2)
-;;               (let [ [t m] (reduce-stack t1 t2 m1 m2) ]
-;;                 (do (println "ONE:" t m)
-;;                     (nd-sr-parse sentence (cons t (drop 2 stack))
-;;                                  (cons m (drop 2 sem)))))
 
-;;               ;; if not reducible, recurse on shifted stack and rest of sentence
-;;               (let [new-stack-sem (shift sentence stack sem)] 
-;;                 (nd-sr-parse (rest sentence) (first new-stack-sem) (second new-stack-sem)))))
-;;           (if (< (count stack) 2)
-;;             (do (println "found valid parse:" (type-to-string t2))
-;;                 ;;(println sem)
-;;                 true)
-;;             (if (reducible? t1 t2)
-;;               ;; if reducible, recurse on reduced stack
-;;               (let [ [t m] (reduce-stack t1 t2 m1 m2)]
-;;                 (do (println "TWO" t m)
-;;                     (nd-sr-parse sentence (cons t (drop 2 stack))
-;;                                  (cons m (drop 2 sem)))))
-;;               ;; otherwise return failure
-;;               (do (println "failed to find a valid parse")
-;;                   false)))))))
-
-;; Non-deterministic shift-reduce parse
-;; returns true if the sentence has a valid parse from random lexical selections
-(defn nd-sr-parse [sentence stack]
-  (let [t1 (second stack)
-        t2 (first stack)]
-    (do (println "\nSTACK:" (reverse (map type-to-string stack)))
-        (println "INPUT:" sentence)
-        (if (not (empty? sentence))
-          (if (< (count stack) 2)
-            (let [new-stack (shift sentence stack)]
-              ;; recurse on shifted stack and rest of sentence
-              (nd-sr-parse (rest sentence) new-stack))
-            ;; else if reducible, recurse on reduced stack
-            (if (reducible? t1 t2)
-              (let [t (reduce-stack t1 t2)]
-                (nd-sr-parse sentence (cons t (drop 2 stack))))
-
-              ;; if not reducible, recurse on shifted stack and rest of sentence
-              (let [new-stack (shift sentence stack)] 
-                (nd-sr-parse (rest sentence) new-stack))))
-          (if (< (count stack) 2)
-            (do (println "found valid parse:" (type-to-string t2))
-                true)
-            (if (reducible? t1 t2)
-              ;; if reducible, recurse on reduced stack
-              (let [ t (reduce-stack t1 t2)]
-                (nd-sr-parse sentence (cons t (drop 2 stack))))
-              ;; otherwise return failure
-              (do (println "failed to find a valid parse")
-                  false)))))))
+;; set of objects from vision that are located in the immediate environment
+(def objects-detected #{"puck" "skate"})
 
 (println "\n---------------------------")
 
-(def example3 "#77 hit Jagr")
-(def example1 "the puck hit Henrik")
-(def example2 "Henrick saved the shot")
-(def example4 "the players skate for the fans")
-
-(nd-sr-parse (split example4 #"\s") '() )
-
-
+(def example3 "jagr loved 77")
+(def answer (ccg-parse (split example3 #"\s") '() hockey-lexicon))
 
