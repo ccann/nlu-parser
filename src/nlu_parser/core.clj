@@ -204,8 +204,9 @@
 ;; pretty print the workspace; returns nil
 (defn pprint-ws [ws]
   (do (println "\nWorkspace:")
-      (doseq [s (map (partial map tts) (map reverse ws))]
-        (println s))))
+      (let [wksp (map (partial map tts) (map reverse ws))]
+        (doseq [i (range (count wksp))]
+          (println i ":" (nth wksp i))))))
 
 ;; set of objects from vision that are located in the immediate environment
 (def objects-detected #{"puck"})
