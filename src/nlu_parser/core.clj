@@ -7,7 +7,8 @@
 ;; TODO semantics
 ;; TODO add ruthless reduce first heuristic
 
-(ns nlu-parser.core)
+(ns nlu-parser.core
+  (:gen-class))
 (use '[clojure.string :only (join split)])
 
 ;; FUNDAMENTAL TYPES 
@@ -32,9 +33,9 @@
         (:cat t)))
 
 ;; LEXICON 
-(def hockey-lexicon {"77" {(Atom. 'NP) '77
-                            (forward-tr (Atom. 'NP)) (fn [x] (x '77))
-                            (backward-tr (Atom. 'NP)) (fn [x] (x '77))}
+(def hockey-lexicon {"ray" {(Atom. 'NP) 'ray
+                            (forward-tr (Atom. 'NP)) (fn [x] (x 'ray))
+                            (backward-tr (Atom. 'NP)) (fn [x] (x 'ray))}
               
                      "loved" {(Functor. (Functor. (Atom. 'S) "\\" (Atom. 'NP)) "/" (Atom. 'NP))
                                 (fn [y] (fn [x] ['thank y x]))}
@@ -75,6 +76,14 @@
               
                      "scored" {(Functor. (Atom. 'S) "\\" (Atom. 'NP))
                                (fn [x] ['score x])}})         
+
+;; pretty print the workspace; returns nil
+(defn pprint-ws [ws]
+  (println "Workspace:" (map (partial map tts) (map reverse ws))))
+
+;; set of objects from vision that are located in the immediate environment
+(def objects-detected #{"skate"})
+
 
 ;; returns true if one type has a wild card type T that unifies with the other
 (defn unifiable? [t1 t2]
@@ -161,14 +170,6 @@
       (apply concat (for [stack ws]
                       (for [e entries] (ccg-push e stack)))))))
 
-;; if reducible, returns reduced stack, otherwise returns stack
-(defn ccg-reduce [stack]
-  (let [t2 (first stack)
-        t1 (second stack)]
-    (if (reducible? t1 t2)
-      (ccg-reduce (cons (ccg-reduce-types t1 t2) (drop 2 stack)))
-      stack)))
-
 ;; returns true if t1 and t2 are reducible
 (defn reducible? [t1 t2]
   (or (comp-combinable? t1 t2)
@@ -182,6 +183,14 @@
             (comp-combinable? t1 (unify t2 t1))
             false))
         false)))
+
+;; if reducible, returns reduced stack, otherwise returns stack
+(defn ccg-reduce [stack]
+  (let [t2 (first stack)
+        t1 (second stack)]
+    (if (reducible? t1 t2)
+      (ccg-reduce (cons (ccg-reduce-types t1 t2) (drop 2 stack)))
+      stack)))
 
 ;; returns the number of valid left-right inc parses for this sentence
 (defn ccg-parse [sent workspace lex]
@@ -201,15 +210,21 @@
                          (count workspace) "possible parses.")
                 (count succs)))))))
 
-;; pretty print the workspace; returns nil
-(defn pprint-ws [ws]
-  (println "Workspace:" (map (partial map tts) (map reverse ws))))
 
-;; set of objects from vision that are located in the immediate environment
-(def objects-detected #{"puck"})
+(defn valid? [sent lex]
+  (not (.contains (for [w (split sent #"\s")]
+                    (if (.contains (keys lex) w)
+                      true
+                      (do (println w "is not in the lexicon")
+                          false)))
+                  false)))
 
-(println "\n---------------------------")
-
-(def example3 "the player sent for the fans scored")
-(ccg-parse (split example3 #"\s") '() hockey-lexicon)
-
+(defn -main []
+  (println "\n")
+  (println "Lexicon: ray, loved, jagr, the, fans, sent, skate, for, player, scored")
+  (println "Objects detected: skate")
+  (println "e.g. the player sent for the fans scored\nSentence:")
+  (let [s (read-line)]
+    (if (valid? s hockey-lexicon)
+      (ccg-parse (split s #"\s") '() hockey-lexicon)
+      (recur))))
