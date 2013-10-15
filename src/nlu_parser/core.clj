@@ -1,11 +1,10 @@
 ;; @author  ccann
-;; COMP150NLD: Situated Natural Language Understanding on Robots
-;; Assignment 2: Parser
-;;
 ;; NOTE: type-raising is assumed to be in the lexicon, and only on atomic entries.
 ;;
-;; TODO semantics
+;; TODO add semantics...should be straightforward with an actual semantics
 ;; TODO add ruthless reduce first heuristic
+;; TODO move the hockey lexicon out of this file
+;; TODO print the lexicon to stdout more generally
 
 (ns nlu-parser.core
   (:gen-class))
@@ -15,8 +14,8 @@
 (defrecord Atom [cat])
 (defrecord Functor [ret dir arg])
 
-(defn is-functor? [t] (= (class t) Functor))
-(defn is-atom? [t] (= (class t) Atom))
+(defn functor? [t] (= (class t) Functor))
+(defn atom? [t] (= (class t) Atom))
 
 ;; Returns the result of applying the forward type-raising combinator to atom
 (defn forward-tr [atom]
@@ -27,10 +26,8 @@
 
 ;; returns a string representation of the complex or simple type
 (defn tts [t]
-  (cond (is-functor? t)
-        (str "(" (tts (:ret t)) (:dir t) (tts (:arg t)) ")")
-        (is-atom? t)
-        (:cat t)))
+  (cond (functor? t) (str "(" (tts (:ret t)) (:dir t) (tts (:arg t)) ")")
+        (atom? t) (:cat t)))
 
 ;; LEXICON 
 (def hockey-lexicon {"ray" {(Atom. 'NP) 'ray
@@ -87,22 +84,22 @@
 
 ;; returns true if one type has a wild card type T that unifies with the other
 (defn unifiable? [t1 t2]
-  (if (and (is-functor? t2) (is-functor? t1)
+  (if (and (functor? t2) (functor? t1)
            (= (Atom. 'T) (:ret (:arg t1))))
-    (if (is-functor? (:ret t2))
+    (if (functor? (:ret t2))
       (= (:arg (:ret t2)) (:arg (:arg t1)))
       (and (= (:arg t2) (:arg (:arg t1))) (= (:dir (:arg t1)) (:dir t2))))
     false))
 
 ;; returns the unification of t1 with t2 (replaces 'T with the return value of t2)
 (defn unify [t1 t2]
-  (if (is-functor? (:ret t2))
+  (if (functor? (:ret t2))
         (assoc (assoc t1 :arg (:ret t2)) :ret (:ret (:ret t2)))
         (assoc (assoc t1 :arg t2) :ret (:ret t2))))
 
 ;; returns true if two Types are combinable by composition combinators
 (defn comp-combinable? [t1 t2]
-  (cond (and (is-functor? t1) (is-functor? t2))
+  (cond (and (functor? t1) (functor? t2))
         (cond
          ;; > Forward composition combinator
          (and (= (:dir t1) "/") (= (:dir t2) "/"))
@@ -116,10 +113,10 @@
 (defn app-combinable? [t1 t2]
   (cond 
    ;; > Forward application combinator
-   (and (is-functor? t1) (is-atom? t2))
+   (and (functor? t1) (atom? t2))
    (and (= (:dir t1) "/") (= (:arg t1) t2))
    ;; < Backward application combinator
-   (and (is-atom? t1) (is-functor? t2))
+   (and (atom? t1) (functor? t2))
    (and (= (:dir t2) "\\") (= (:arg t2) t1))
    :else false))
 
@@ -127,11 +124,11 @@
 (defn combine [t1 t2]
   (do
     #_(println "COMBINING" (tts t1) "and" (tts t2)) 
-    (cond (and (is-functor? t1) (is-functor? t2))
+    (cond (and (functor? t1) (functor? t2))
           (if (and (= (:dir t2) "/") (= (:dir t1) "/"))
             (Functor. (:ret t1) "/" (:arg t2))
             (Functor. (:ret t2) "\\" (:arg t1)))
-          (is-functor? t1)  (:ret t1)
+          (functor? t1)  (:ret t1)
           :else             (:ret t2))))
 
 ;; returns the reduction of t1 and t2 -- call reducible? first as a check
@@ -174,7 +171,7 @@
 (defn reducible? [t1 t2]
   (or (comp-combinable? t1 t2)
       (app-combinable? t1 t2)
-      (if (and (is-functor? t1) (is-functor? t2))
+      (if (and (functor? t1) (functor? t2))
         (if (and (and (= (:dir t2) "/") (= (:dir t1) "/"))
                  (unifiable? t1 t2))
           (comp-combinable? (unify t1 t2) t2)
@@ -194,11 +191,11 @@
 
 ;; returns the number of valid left-right inc parses for this sentence
 (defn ccg-parse [sent workspace lex]
-  (do (pprint-ws workspace)
+  (do #_(pprint-ws workspace)
       (if (not (empty? sent))
         (let [word (first sent)
               ws (ccg-shift word workspace lex)]
-          (do (pprint-ws ws)
+          (do #_(pprint-ws ws)
               (ccg-parse (rest sent)       
                          (for [stack ws]
                            (ccg-reduce stack))
