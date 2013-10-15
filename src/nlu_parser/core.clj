@@ -210,7 +210,6 @@
                          (count workspace) "possible parses.")
                 (count succs)))))))
 
-
 (defn valid? [sent lex]
   (not (.contains (for [w (split sent #"\s")]
                     (if (.contains (keys lex) w)
