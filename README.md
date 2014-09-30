@@ -7,7 +7,7 @@ This parser has a situatedness component wherein if an object is "detected" (pre
 
 ## Usage
 ```sh
-java -jar nlu-parser-0.1.0-SNAPSHOT-standalone.jar
+$ java -jar nlu-parser-0.1.0-SNAPSHOT-standalone.jar
 ```
 
 ## References
